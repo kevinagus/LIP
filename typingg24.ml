@@ -1,6 +1,8 @@
+(SINTASSI)
+type ide = Ide of string;;
 
-  (**SINTASSI**)
-  
+Ide "f";;
+
 type exp =
 Val of ide
 | Eint of int
@@ -26,11 +28,9 @@ Val of ide
 | Let of ide * exp * exp
 | Fun of ide * exp
 | Appl of exp * exp
-| Rec of ide * exp
+| Rec of ide * exp;;
 
-and
-      
-ide = Ide of string;;
+type env = ide -> eval;;
 
     type eval =
 Undefined
@@ -39,10 +39,8 @@ Undefined
 | Char of char
 | List of eval list
 | Pair of eval * eval
-| Closure of exp * env
-
-    and
-	  env = ide -> eval;;
+| Closure of exp * env;;
+  
 
 type etype =
 TBool
@@ -57,16 +55,19 @@ let nextsym = ref (-1);;
 let newvar = fun () -> nextsym := !nextsym + 1;
 TVar ("?T" ^ string_of_int (!nextsym));;
 
-let rec typeinf e ide = match e with
-|Val(i)-> TVar (ide i)
+exception TypeExc of string;;
+
+let rec typeinf e = match e with
+|Val(i)-> (match i with
+    Ide s-> TVar s
+  |_->raise (TypeExc ("Not a ide")))
 |Eint(e) -> TInt
 |Echar(e) -> Tchar
 |True -> TBool
 |False -> TBool
-|Empty -> TList (newvar a)/*************+/
 |Sum(e1,e2)
 |Diff(e1,e2)
-|Times(e1,e2) -> if typeinf e1 = TInt then
+|Times(e1,e2) -> if (typeinf e1) = TInt then
     if typeinf e2 = TInt then
       TInt else
       raise (TypeExc ("Not a TInt")) else
@@ -84,22 +85,49 @@ let rec typeinf e ide = match e with
       TBool else
       raise (TypeExc ("Not a TInt")) else
     raise (TypeExc ("Not a TInt"))
-|Cons(e1,e2) -> let tipo = typeinf e1 in if typeinf e2 = TList(tipo) then
-    TList(tipo) else
+|Cons(e1,e2) -> let tipo = typeinf e1 in
+  if (typeinf e2 = TList (tipo::[])) || (e2 = Empty) then
+    TList (tipo::[]) else
     raise (TypeExc ("Not compatible"))
-|Head(e) -> if typeinf e = TList then typeinf (List.hd e) else
+|Empty -> TList (newvar()::[])
+|Head(e) -> if typeinf e = TList ((typeinf e)::[]) then typeinf e else
   raise (TypeExc ("Not a TList"))
-|Tail(e) -> if typeinf e = TList then TList(typeinf e) else
+|Tail(e) -> if typeinf e = TList ((typeinf e)::[]) then TList((typeinf e)::[]) else
   raise (TypeExc ("Not a TList"))
-|Fst(e) -> match typeinf e with
-  | Tpair(ex1,ex2)-> ex1
-  | _ -> raise (TypeExc ("Not a TPair"))
-|Snd(e) -> match typeinf e with
-  | Tpair(ex1,ex2)-> ex2
-  | _ -> raise (TypeExc ("Not a TPair"))
+|Fst(e)->( match (typeinf e) with
+   TPair(ex1,ex2)-> ex1
+  | _ -> raise (TypeExc ("Not a TPair")))
+|Snd(e) -> (match (typeinf e) with
+   TPair(ex1,ex2)->  ex2
+  | _ -> raise (TypeExc ("Not a TPair")))
 |Epair(e1,e2) -> TPair(typeinf e1, typeinf e)
 |Ifthenelse(t,e1,e2) -> if typeinf t = TBool then
     if typeinf e1 = typeinf e2 then
       typeinf e1 else
-      raise (Typecheck ("Different types")) else
-    raise (Typecheck ("Not a TBool"));
+      raise (TypeExc ("Different types")) else
+    raise (TypeExc ("Not a TBool"))
+|Fun(x,t)-> (match (x,typeinf t) with
+    (Ide s,e) -> TFun(newvar(),e)
+  |(_,_)->raise(TypeExc("Not a ide")))
+|Appl(e1,e2)->let tipo=typeinf e2 and a=newvar() in
+  if(typeinf e1=TFun(tipo,a)) then a
+  else raise(TypeExc ("Not applicable"))
+|Let(s,e1,e2)->let a=newvar() in
+  match s with
+    Ide s->
+      (if(typeinf e1=a)then
+	typeinf e2
+       else
+	raise(TypeExc ("Different Types")))
+  | _ -> raise(TypeExc("Not a ide"))
+;;
+
+typeinf e6;;
+let e = Fun(Ide "x",Ifthenelse(Eq(Val(Ide "x"),Empty),True,False));;
+let e1=Fun(Ide "x",Fun(Ide "y",Val(Ide "x")));;
+let e2=Eq(Eq(Cons(Eint 1, Cons(Eint 2, Empty)),Cons(Eint 1, Cons(Eint 2, Empty))),False);;
+let e3 =Cons(Eint 1, Cons(Eint 2, Empty));;
+let e4=Cons(Cons(Eint 1,Empty),Empty);;
+let e5=Let(Ide "f", Fun(Ide "x",Fun(Ide "y",Val(Ide "x"))),
+	   Appl(Appl(Val(Ide "f"),Eint 2),Eint 1));;
+let e6= Fun(Ide "x",Fun(Ide "y",Val(Ide "x")));;
