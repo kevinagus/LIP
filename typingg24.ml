@@ -112,17 +112,11 @@ let rec typeinf e = match e with
 |Appl(e1,e2)->let tipo=typeinf e2 and a=newvar() in
   if(typeinf e1=TFun(tipo,a)) then a
   else raise(TypeExc ("Not applicable"))
-|Let(s,e1,e2)->let a=newvar() in
-  match s with
-    Ide s->
-      (if(typeinf e1=a)then
-	typeinf e2
-       else
-	raise(TypeExc ("Different Types")))
-  | _ -> raise(TypeExc("Not a ide"))
+|Let(s,e1,e2)->
 ;;
+  
+typeinf e5;;
 
-typeinf e6;;
 let e = Fun(Ide "x",Ifthenelse(Eq(Val(Ide "x"),Empty),True,False));;
 let e1=Fun(Ide "x",Fun(Ide "y",Val(Ide "x")));;
 let e2=Eq(Eq(Cons(Eint 1, Cons(Eint 2, Empty)),Cons(Eint 1, Cons(Eint 2, Empty))),False);;
@@ -130,4 +124,3 @@ let e3 =Cons(Eint 1, Cons(Eint 2, Empty));;
 let e4=Cons(Cons(Eint 1,Empty),Empty);;
 let e5=Let(Ide "f", Fun(Ide "x",Fun(Ide "y",Val(Ide "x"))),
 	   Appl(Appl(Val(Ide "f"),Eint 2),Eint 1));;
-let e6= Fun(Ide "x",Fun(Ide "y",Val(Ide "x")));;
