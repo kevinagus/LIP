@@ -112,7 +112,7 @@ let rec typeinf e = match e with
 |Appl(e1,e2)->let tipo=typeinf e2 and a=newvar() in
   if(typeinf e1=TFun(tipo,a)) then a
   else raise(TypeExc ("Not applicable"))
-|Let(s,e1,e2)->
+|Let(x,t1,t2)-> typeinf t2
 ;;
   
 typeinf e5;;
